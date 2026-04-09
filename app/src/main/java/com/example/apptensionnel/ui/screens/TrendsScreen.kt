@@ -7,9 +7,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -211,7 +211,7 @@ fun StatCard(title: String, value: String, unit: String, trend: String, modifier
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.TrendingDown, contentDescription = null, tint = Color(0xFF43A047), modifier = Modifier.size(14.dp))
+                Icon(Icons.AutoMirrored.Filled.TrendingDown, contentDescription = null, tint = Color(0xFF43A047), modifier = Modifier.size(14.dp))
                 Text(text = " $trend", color = Color(0xFF43A047), fontSize = 12.sp)
             }
         }

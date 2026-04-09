@@ -46,6 +46,9 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.compose.material.icons.extended)
+    
+    // Ajout de la dépendance pour les graphiques
+    implementation(libs.mpandroidchart)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

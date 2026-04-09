@@ -35,14 +35,15 @@ import java.util.*
 @Composable
 fun AddMeasurementScreen(
     preferenceManager: PreferenceManager,
+    measurementToEdit: Measurement? = null,
     onBack: () -> Unit,
     onSave: () -> Unit
 ) {
     var currentStep by remember { mutableIntStateOf(1) }
-    var systolic by remember { mutableStateOf("") }
-    var diastolic by remember { mutableStateOf("") }
-    var pulse by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
+    var systolic by remember { mutableStateOf(measurementToEdit?.systolic?.toString() ?: "") }
+    var diastolic by remember { mutableStateOf(measurementToEdit?.diastolic?.toString() ?: "") }
+    var pulse by remember { mutableStateOf(measurementToEdit?.pulse?.toString() ?: "") }
+    var notes by remember { mutableStateOf(measurementToEdit?.notes ?: "") }
     
     val context = LocalContext.current
     val totalSteps = 4
@@ -52,7 +53,7 @@ fun AddMeasurementScreen(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // Header Bleu
+        // Header Bleu identique aux images
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -71,7 +72,12 @@ fun AddMeasurementScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour", tint = Color.White)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text(text = "Nouvelle Mesure", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (measurementToEdit == null) "Nouvelle Mesure" else "Modifier la Mesure",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 Spacer(modifier = Modifier.height(20.dp))
                 
@@ -97,7 +103,7 @@ fun AddMeasurementScreen(
             }
         }
 
-        // Zone de contenu
+        // Zone de contenu (ajustée pour éviter le scroll)
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -135,7 +141,8 @@ fun AddMeasurementScreen(
                     diastolic = diastolic,
                     pulse = pulse,
                     notes = notes,
-                    onNotesChange = { notes = it }
+                    onNotesChange = { notes = it },
+                    date = measurementToEdit?.date ?: System.currentTimeMillis()
                 )
             }
         }
@@ -154,7 +161,7 @@ fun AddMeasurementScreen(
                         val dia = diastolic.toIntOrNull() ?: 0
                         val pls = pulse.toIntOrNull() ?: 0
                         
-                        // Règle métier : Alerte Crise
+                        // Règle métier : Alerte Crise (Systolique > 180 ou Diastolique > 120)
                         if (sys > 180 || dia > 120) {
                             val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                 val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
@@ -172,14 +179,25 @@ fun AddMeasurementScreen(
                             }
                         }
 
-                        preferenceManager.addMeasurement(
-                            Measurement(
-                                systolic = sys,
-                                diastolic = dia,
-                                pulse = pls,
-                                notes = notes
+                        if (measurementToEdit == null) {
+                            preferenceManager.addMeasurement(
+                                Measurement(
+                                    systolic = sys,
+                                    diastolic = dia,
+                                    pulse = pls,
+                                    notes = notes
+                                )
                             )
-                        )
+                        } else {
+                            preferenceManager.updateMeasurement(
+                                measurementToEdit.copy(
+                                    systolic = sys,
+                                    diastolic = dia,
+                                    pulse = pls,
+                                    notes = notes
+                                )
+                            )
+                        }
                         onSave()
                     }
                 },
@@ -203,7 +221,7 @@ fun AddMeasurementScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Enregistrer", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(if (measurementToEdit == null) "Enregistrer" else "Mettre à jour", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -232,6 +250,7 @@ fun InputStep(
         
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Affichage de la valeur
         Card(
             modifier = Modifier.fillMaxWidth().height(100.dp),
             shape = RoundedCornerShape(20.dp),
@@ -259,6 +278,7 @@ fun InputStep(
 
         Spacer(modifier = Modifier.weight(1f))
 
+        // Pavé numérique compact
         NumericKeypad(onValueChange = onValueChange, currentValue = value)
     }
 }
@@ -308,7 +328,8 @@ fun SummaryStep(
     diastolic: String,
     pulse: String,
     notes: String,
-    onNotesChange: (String) -> Unit
+    onNotesChange: (String) -> Unit,
+    date: Long = System.currentTimeMillis()
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Text(text = "Note (optionnel)", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
@@ -344,7 +365,7 @@ fun SummaryStep(
                 SummaryRow("Systolique", "$systolic mmHg", AppBlue)
                 SummaryRow("Diastolique", "$diastolic mmHg", AppBlue)
                 SummaryRow("Pouls", "$pulse bpm", StatusCrisis)
-                SummaryRow("Date", SimpleDateFormat("d MMMM yyyy, HH:mm", Locale.FRENCH).format(Date()), Color.DarkGray)
+                SummaryRow("Date", SimpleDateFormat("d MMMM yyyy, HH:mm", Locale.FRENCH).format(Date(date)), Color.DarkGray)
             }
         }
     }

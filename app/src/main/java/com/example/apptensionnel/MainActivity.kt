@@ -6,9 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -19,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.apptensionnel.data.PreferenceManager
+import com.example.apptensionnel.data.models.Measurement
 import com.example.apptensionnel.ui.navigation.Screen
 import com.example.apptensionnel.ui.navigation.navItems
 import com.example.apptensionnel.ui.screens.AddMeasurementScreen
@@ -53,6 +52,9 @@ fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    // État pour stocker la mesure en cours d'édition
+    var editingMeasurement by remember { mutableStateOf<Measurement?>(null) }
 
     // On ne montre la BottomBar que sur les écrans principaux
     val showBottomBar = navItems.any { it.route == currentDestination?.route }
@@ -91,19 +93,37 @@ fun MainScreen() {
             composable(Screen.Home.route) { 
                 HomeScreen(
                     preferenceManager = preferenceManager,
-                    onNavigateToAdd = { navController.navigate("add_measurement") }
+                    onNavigateToAdd = { 
+                        editingMeasurement = null // Reset pour un nouvel ajout
+                        navController.navigate("add_measurement") 
+                    }
                 ) 
             }
             composable(Screen.Trends.route) { TrendsScreen(preferenceManager) }
-            composable(Screen.History.route) { HistoryScreen() }
+            composable(Screen.History.route) { 
+                HistoryScreen(
+                    preferenceManager = preferenceManager,
+                    onEdit = { measurement ->
+                        editingMeasurement = measurement
+                        navController.navigate("add_measurement")
+                    }
+                ) 
+            }
             composable(Screen.Settings.route) { SettingsScreen(preferenceManager) }
             
-            // Écran d'ajout (Plein écran)
+            // Écran d'ajout / édition (Plein écran)
             composable("add_measurement") {
                 AddMeasurementScreen(
                     preferenceManager = preferenceManager,
-                    onBack = { navController.popBackStack() },
-                    onSave = { navController.popBackStack() }
+                    measurementToEdit = editingMeasurement,
+                    onBack = { 
+                        editingMeasurement = null
+                        navController.popBackStack() 
+                    },
+                    onSave = { 
+                        editingMeasurement = null
+                        navController.popBackStack() 
+                    }
                 )
             }
         }

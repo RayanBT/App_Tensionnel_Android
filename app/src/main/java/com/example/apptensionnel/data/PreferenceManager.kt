@@ -37,6 +37,21 @@ class PreferenceManager(context: Context) {
         saveMeasurements(measurements)
     }
 
+    fun updateMeasurement(updatedMeasurement: Measurement) {
+        val measurements = getMeasurements().toMutableList()
+        val index = measurements.indexOfFirst { it.id == updatedMeasurement.id }
+        if (index != -1) {
+            measurements[index] = updatedMeasurement
+            saveMeasurements(measurements)
+        }
+    }
+
+    fun deleteMeasurementById(id: String) {
+        val measurements = getMeasurements().toMutableList()
+        measurements.removeAll { it.id == id }
+        saveMeasurements(measurements)
+    }
+
     fun deleteLastMeasurement() {
         val measurements = getMeasurements().toMutableList()
         if (measurements.isNotEmpty()) {
@@ -83,8 +98,8 @@ class PreferenceManager(context: Context) {
             calendar.time = Date()
             calendar.add(Calendar.DAY_OF_YEAR, -i)
             
-            // Variations réalistes (Légère tendance à la baisse pour faire "joli")
-            val trendImprovement = (i.toFloat() / 30f) * 5f // Amélioration de 5mmHg sur 30 jours
+            // Variations réalistes
+            val trendImprovement = (i.toFloat() / 30f) * 5f
             val baseSys = 135 - trendImprovement.toInt()
             val baseDia = 85 - (trendImprovement / 2).toInt()
             val basePulse = 72
@@ -95,11 +110,10 @@ class PreferenceManager(context: Context) {
                     diastolic = baseDia + random.nextInt(10) - 3,
                     pulse = basePulse + random.nextInt(12) - 4,
                     date = calendar.timeInMillis,
-                    notes = "Donnée simulée"
+                    notes = if (i % 5 == 0) "Après le café" else if (i % 7 == 0) "Soir" else ""
                 )
             )
         }
-        // On sauvegarde (en inversant pour avoir le plus récent en premier comme attendu par l'app)
         saveMeasurements(fakeMeasurements.reversed())
     }
 
