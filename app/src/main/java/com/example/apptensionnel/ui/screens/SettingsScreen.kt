@@ -19,9 +19,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.apptensionnel.data.PreferenceManager
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(preferenceManager: PreferenceManager) {
     val scrollState = rememberScrollState()
     val primaryBlue = Color(0xFF0D47A1) // Deep blue from mockup
     val backgroundColor = Color(0xFFF5F7FA) // Light grey/blue background
@@ -89,7 +90,7 @@ fun SettingsScreen() {
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                var backupEnabled by remember { mutableStateOf(true) }
+                var backupEnabled by remember { mutableStateOf(preferenceManager.isBackupEnabled) }
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -110,7 +111,10 @@ fun SettingsScreen() {
                     }
                     Switch(
                         checked = backupEnabled,
-                        onCheckedChange = { backupEnabled = it },
+                        onCheckedChange = { 
+                            backupEnabled = it
+                            preferenceManager.isBackupEnabled = it
+                        },
                         colors = SwitchDefaults.colors(checkedTrackColor = primaryBlue)
                     )
                 }
@@ -118,7 +122,7 @@ fun SettingsScreen() {
 
             // --- SECTION RAPPELS & NOTIFICATIONS ---
             SettingsSection(title = "RAPPELS & NOTIFICATIONS", icon = Icons.Default.NotificationsNone) {
-                var dailyReminder by remember { mutableStateOf(true) }
+                var dailyReminder by remember { mutableStateOf(preferenceManager.isReminderEnabled) }
                 SettingsItem(
                     icon = Icons.Default.NotificationsNone,
                     iconBackground = Color(0xFFE3F2FD),
@@ -128,7 +132,10 @@ fun SettingsScreen() {
                     trailing = {
                         Switch(
                             checked = dailyReminder,
-                            onCheckedChange = { dailyReminder = it },
+                            onCheckedChange = { 
+                                dailyReminder = it
+                                preferenceManager.isReminderEnabled = it
+                            },
                             colors = SwitchDefaults.colors(checkedTrackColor = primaryBlue)
                         )
                     }
@@ -160,7 +167,12 @@ fun SettingsScreen() {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(text = "08:00", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = primaryBlue)
+                            Text(
+                                text = preferenceManager.reminderTime,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = primaryBlue
+                            )
                             Icon(Icons.Default.AccessTime, contentDescription = null, tint = Color.LightGray)
                         }
                     }
