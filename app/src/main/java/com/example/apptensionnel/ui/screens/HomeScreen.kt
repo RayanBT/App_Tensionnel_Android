@@ -107,8 +107,7 @@ fun HeaderSection() {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+            verticalAlignment = Alignment.CenterVertically) {
             Column {
                 Text(text = "Bonjour, Jean-Pierre 👋", color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
                 Text(text = "Tableau de Bord", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
@@ -291,7 +290,7 @@ fun RecentMeasurementsCard(measurements: List<Measurement>, modifier: Modifier =
                 val status = getStatus(measurement.systolic, measurement.diastolic)
                 MeasurementRow(
                     pressure = "${measurement.systolic}/${measurement.diastolic}",
-                    date = SimpleDateFormat("d avr., HH:mm", Locale.FRENCH).format(Date(measurement.date)),
+                    date = SimpleDateFormat("d MMM, HH:mm", Locale.FRENCH).format(Date(measurement.date)),
                     pulse = "${measurement.pulse} bpm",
                     statusColor = status.color
                 )

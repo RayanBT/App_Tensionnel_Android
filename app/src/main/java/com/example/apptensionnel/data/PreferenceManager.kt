@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import com.example.apptensionnel.data.models.Measurement
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.*
 
 class PreferenceManager(context: Context) {
     private val sharedPreferences: SharedPreferences =
@@ -36,6 +37,18 @@ class PreferenceManager(context: Context) {
         saveMeasurements(measurements)
     }
 
+    fun deleteLastMeasurement() {
+        val measurements = getMeasurements().toMutableList()
+        if (measurements.isNotEmpty()) {
+            measurements.removeAt(0)
+            saveMeasurements(measurements)
+        }
+    }
+
+    fun deleteAllMeasurements() {
+        sharedPreferences.edit { remove(KEY_MEASUREMENTS) }
+    }
+
     fun getMeasurements(): List<Measurement> {
         val jsonString = sharedPreferences.getString(KEY_MEASUREMENTS, null) ?: return emptyList()
         val measurements = mutableListOf<Measurement>()
@@ -58,6 +71,36 @@ class PreferenceManager(context: Context) {
             e.printStackTrace()
         }
         return measurements
+    }
+
+    fun generateFakeData() {
+        val calendar = Calendar.getInstance()
+        val fakeMeasurements = mutableListOf<Measurement>()
+        val random = Random()
+        
+        // Génère des données pour les 30 derniers jours
+        for (i in 30 downTo 0) {
+            calendar.time = Date()
+            calendar.add(Calendar.DAY_OF_YEAR, -i)
+            
+            // Variations réalistes (Légère tendance à la baisse pour faire "joli")
+            val trendImprovement = (i.toFloat() / 30f) * 5f // Amélioration de 5mmHg sur 30 jours
+            val baseSys = 135 - trendImprovement.toInt()
+            val baseDia = 85 - (trendImprovement / 2).toInt()
+            val basePulse = 72
+            
+            fakeMeasurements.add(
+                Measurement(
+                    systolic = baseSys + random.nextInt(15) - 5,
+                    diastolic = baseDia + random.nextInt(10) - 3,
+                    pulse = basePulse + random.nextInt(12) - 4,
+                    date = calendar.timeInMillis,
+                    notes = "Donnée simulée"
+                )
+            )
+        }
+        // On sauvegarde (en inversant pour avoir le plus récent en premier comme attendu par l'app)
+        saveMeasurements(fakeMeasurements.reversed())
     }
 
     private fun saveMeasurements(measurements: List<Measurement>) {

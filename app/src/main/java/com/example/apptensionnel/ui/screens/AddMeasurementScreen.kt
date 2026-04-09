@@ -344,7 +344,7 @@ fun SummaryStep(
                 SummaryRow("Systolique", "$systolic mmHg", AppBlue)
                 SummaryRow("Diastolique", "$diastolic mmHg", AppBlue)
                 SummaryRow("Pouls", "$pulse bpm", StatusCrisis)
-                SummaryRow("Date", SimpleDateFormat("d avril 2026, HH:mm", Locale.FRENCH).format(Date()), Color.DarkGray)
+                SummaryRow("Date", SimpleDateFormat("d MMMM yyyy, HH:mm", Locale.FRENCH).format(Date()), Color.DarkGray)
             }
         }
     }

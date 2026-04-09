@@ -43,7 +43,13 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
-    val preferenceManager = remember { PreferenceManager(context) }
+    val preferenceManager = remember { 
+        PreferenceManager(context).apply {
+            if (getMeasurements().isEmpty()) {
+                generateFakeData()
+            }
+        }
+    }
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -88,7 +94,7 @@ fun MainScreen() {
                     onNavigateToAdd = { navController.navigate("add_measurement") }
                 ) 
             }
-            composable(Screen.Trends.route) { TrendsScreen() }
+            composable(Screen.Trends.route) { TrendsScreen(preferenceManager) }
             composable(Screen.History.route) { HistoryScreen() }
             composable(Screen.Settings.route) { SettingsScreen(preferenceManager) }
             
