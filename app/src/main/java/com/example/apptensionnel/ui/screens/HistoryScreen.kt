@@ -1,21 +1,23 @@
 package com.example.apptensionnel.ui.screens
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,6 +55,7 @@ fun HistoryScreen(
             .fillMaxSize()
             .background(Color(0xFFF5F7FA))
     ) {
+        // --- HEADER ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -70,7 +73,7 @@ fun HistoryScreen(
                         Text(text = "${measurements.size} mesures enregistrées", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
                     }
                     IconButton(
-                        onClick = { /* Filtrer */ },
+                        onClick = { /* Filtres */ },
                         modifier = Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.2f))
                     ) {
                         Icon(Icons.Default.FilterList, contentDescription = null, tint = Color.White)
@@ -82,9 +85,7 @@ fun HistoryScreen(
                 TextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
                     placeholder = { Text("Rechercher une mesure...", color = Color.White.copy(alpha = 0.6f)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.6f)) },
                     colors = TextFieldDefaults.colors(
@@ -100,30 +101,53 @@ fun HistoryScreen(
             }
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 100.dp)
+        // --- INSTRUCTION DISCRÈTE ---
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, start = 20.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            groupedMeasurements.forEach { (date, items) ->
-                item {
-                    Text(
-                        text = date,
-                        modifier = Modifier.padding(start = 20.dp, top = 24.dp, bottom = 8.dp),
-                        color = Color.LightGray,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+            Icon(Icons.Default.TouchApp, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "Appui long pour modifier • Balayez pour supprimer",
+                color = Color.LightGray,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
 
-                items(items, key = { it.id }) { measurement ->
-                    StickySwipeItem(
-                        measurement = measurement,
-                        onDelete = {
-                            preferenceManager.deleteMeasurementById(measurement.id)
-                            measurements = preferenceManager.getMeasurements()
-                        },
-                        onEdit = { onEdit(measurement) }
-                    )
+        // --- LISTE ---
+        if (measurements.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text = "Aucune mesure enregistrée", color = Color.Gray)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 100.dp)
+            ) {
+                groupedMeasurements.forEach { (date, items) ->
+                    item {
+                        Text(
+                            text = date,
+                            modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp),
+                            color = Color.LightGray,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    items(items, key = { it.id }) { measurement ->
+                        SwipeToDeleteItem(
+                            measurement = measurement,
+                            onDelete = {
+                                preferenceManager.deleteMeasurementById(measurement.id)
+                                measurements = preferenceManager.getMeasurements()
+                            },
+                            onEdit = { onEdit(measurement) }
+                        )
+                    }
                 }
             }
         }
@@ -132,89 +156,89 @@ fun HistoryScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StickySwipeItem(
+fun SwipeToDeleteItem(
     measurement: Measurement,
     onDelete: () -> Unit,
     onEdit: () -> Unit
 ) {
-    val dismissState = rememberSwipeToDismissBoxState()
     val scope = rememberCoroutineScope()
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { targetValue ->
+            if (targetValue == SwipeToDismissBoxValue.EndToStart) {
+                onDelete()
+                true
+            } else {
+                false
+            }
+        }
+    )
 
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
         backgroundContent = {
+            val isDismissing = dismissState.targetValue == SwipeToDismissBoxValue.EndToStart
+            val color by animateColorAsState(
+                if (isDismissing) StatusCrisis else Color.Transparent,
+                label = "bg_color"
+            )
+            val scale by animateFloatAsState(
+                if (isDismissing) 1.2f else 0.8f,
+                label = "icon_scale"
+            )
+
             Box(
                 Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(color),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = { scope.launch { dismissState.reset() } },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                            .padding(4.dp)
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = "Fermer", tint = Color.Black, modifier = Modifier.size(16.dp))
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    
-                    IconButton(
-                        onClick = onEdit,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppBlue)
-                    ) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editer", tint = Color.White)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(StatusCrisis)
-                    ) {
-                        Icon(Icons.Default.Delete, contentDescription = "Supprimer", tint = Color.White)
-                    }
-                }
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Supprimer",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .padding(end = 24.dp)
+                        .scale(scale)
+                )
             }
         }
     ) {
         HistoryItemCard(
             measurement = measurement,
-            onClick = {
-                if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-                    scope.launch { dismissState.reset() }
-                }
+            onEditRequest = onEdit,
+            onDismissRequest = {
+                scope.launch { dismissState.reset() }
             }
         )
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HistoryItemCard(measurement: Measurement, onClick: () -> Unit = {}) {
+fun HistoryItemCard(
+    measurement: Measurement, 
+    onEditRequest: () -> Unit,
+    onDismissRequest: () -> Unit
+) {
     val status = getStatus(measurement.systolic, measurement.diastolic)
     
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp)
-            .clickable { onClick() },
+            .combinedClickable(
+                onClick = { onDismissRequest() },
+                onLongClick = { onEditRequest() }
+            ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -262,12 +286,16 @@ fun HistoryItemCard(measurement: Measurement, onClick: () -> Unit = {}) {
                 }
             }
             
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Color(0xFFE0E0E0),
-                modifier = Modifier.size(24.dp)
-            )
+            // Icône Édition plus explicite
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.EditNote,
+                    contentDescription = "Éditer (Appui long)",
+                    tint = Color(0xFFE0E0E0),
+                    modifier = Modifier.size(28.dp)
+                )
+                Text("ÉDITER", fontSize = 9.sp, color = Color.LightGray, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
