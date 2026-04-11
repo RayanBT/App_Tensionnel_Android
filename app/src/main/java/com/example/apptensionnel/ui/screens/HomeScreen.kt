@@ -38,6 +38,7 @@ fun HomeScreen(
     val measurements by remember { mutableStateOf(preferenceManager.getMeasurements()) }
     val lastMeasurement = measurements.firstOrNull()
     val context = LocalContext.current
+    val currentProfile = remember { preferenceManager.getCurrentProfile() }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F7FA))) {
         LazyColumn(
@@ -46,6 +47,7 @@ fun HomeScreen(
         ) {
             item { 
                 HeaderSection(
+                    profileName = currentProfile?.name ?: "Utilisateur",
                     onNotificationsClick = {
                         Toast.makeText(context, "Aucune nouvelle notification", Toast.LENGTH_SHORT).show()
                     }
@@ -106,7 +108,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun HeaderSection(onNotificationsClick: () -> Unit) {
+fun HeaderSection(profileName: String, onNotificationsClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -118,7 +120,7 @@ fun HeaderSection(onNotificationsClick: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
             Column {
-                Text(text = "Bonjour, Jean-Pierre 👋", color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
+                Text(text = "Bonjour, $profileName 👋", color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
                 Text(text = "Tableau de Bord", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(

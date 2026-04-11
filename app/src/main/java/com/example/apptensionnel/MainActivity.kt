@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,11 +21,7 @@ import com.example.apptensionnel.data.PreferenceManager
 import com.example.apptensionnel.data.models.Measurement
 import com.example.apptensionnel.ui.navigation.Screen
 import com.example.apptensionnel.ui.navigation.navItems
-import com.example.apptensionnel.ui.screens.AddMeasurementScreen
-import com.example.apptensionnel.ui.screens.HistoryScreen
-import com.example.apptensionnel.ui.screens.HomeScreen
-import com.example.apptensionnel.ui.screens.SettingsScreen
-import com.example.apptensionnel.ui.screens.TrendsScreen
+import com.example.apptensionnel.ui.screens.*
 import com.example.apptensionnel.ui.theme.AppTensionnelTheme
 
 class MainActivity : ComponentActivity() {
@@ -42,21 +39,22 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
-    val preferenceManager = remember { 
-        PreferenceManager(context).apply {
-            if (getMeasurements().isEmpty()) {
-                generateFakeData()
-            }
-        }
-    }
+    val preferenceManager = remember { PreferenceManager(context) }
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // État pour stocker la mesure en cours d'édition
     var editingMeasurement by remember { mutableStateOf<Measurement?>(null) }
+    
+    // Déterminer la destination de départ : si aucun profil n'existe, aller vers la création. 
+    // Si des profils existent mais aucun n'est sélectionné, aller vers la sélection.
+    val profiles = preferenceManager.getProfiles()
+    val startRoute = when {
+        profiles.isEmpty() -> "add_profile"
+        preferenceManager.currentProfileId == null -> "profile_selection"
+        else -> Screen.Home.route
+    }
 
-    // On ne montre la BottomBar que sur les écrans principaux
     val showBottomBar = navItems.any { it.route == currentDestination?.route }
 
     Scaffold(
@@ -87,14 +85,44 @@ fun MainScreen() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
-            modifier = Modifier.padding(if (showBottomBar) innerPadding else androidx.compose.foundation.layout.PaddingValues(0.dp))
+            startDestination = startRoute,
+            modifier = Modifier.padding(if (showBottomBar) innerPadding else PaddingValues(0.dp))
         ) {
+            composable("profile_selection") {
+                ProfileSelectionScreen(
+                    preferenceManager = preferenceManager,
+                    onProfileSelected = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo("profile_selection") { inclusive = true }
+                        }
+                    },
+                    onNavigateToAddProfile = {
+                        navController.navigate("add_profile")
+                    }
+                )
+            }
+
+            composable("add_profile") {
+                AddProfileScreen(
+                    preferenceManager = preferenceManager,
+                    onProfileAdded = {
+                        navController.navigate("profile_selection") {
+                            popUpTo("add_profile") { inclusive = true }
+                        }
+                    },
+                    onNavigateBack = {
+                        if (preferenceManager.getProfiles().isNotEmpty()) {
+                            navController.popBackStack()
+                        }
+                    }
+                )
+            }
+
             composable(Screen.Home.route) { 
                 HomeScreen(
                     preferenceManager = preferenceManager,
                     onNavigateToAdd = { 
-                        editingMeasurement = null // Reset pour un nouvel ajout
+                        editingMeasurement = null
                         navController.navigate("add_measurement") 
                     }
                 ) 
@@ -109,9 +137,18 @@ fun MainScreen() {
                     }
                 ) 
             }
-            composable(Screen.Settings.route) { SettingsScreen(preferenceManager) }
+            composable(Screen.Settings.route) { 
+                SettingsScreen(
+                    preferenceManager = preferenceManager,
+                    onNavigateToProfileSelection = {
+                        navController.navigate("profile_selection") {
+                            // On ne vide pas forcément toute la pile, mais on veut pouvoir revenir ou changer
+                            popUpTo(Screen.Home.route) { inclusive = false }
+                        }
+                    }
+                ) 
+            }
             
-            // Écran d'ajout / édition (Plein écran)
             composable("add_measurement") {
                 AddMeasurementScreen(
                     preferenceManager = preferenceManager,

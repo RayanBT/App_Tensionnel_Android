@@ -182,6 +182,7 @@ fun AddMeasurementScreen(
                         if (measurementToEdit == null) {
                             preferenceManager.addMeasurement(
                                 Measurement(
+                                    profileId = preferenceManager.currentProfileId ?: "",
                                     systolic = sys,
                                     diastolic = dia,
                                     pulse = pls,

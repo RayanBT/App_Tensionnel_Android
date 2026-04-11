@@ -34,7 +34,10 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(preferenceManager: PreferenceManager) {
+fun SettingsScreen(
+    preferenceManager: PreferenceManager,
+    onNavigateToProfileSelection: () -> Unit = {}
+) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val reportManager = remember { ReportManager(context) }
@@ -154,6 +157,23 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                         fontWeight = FontWeight.Bold
                     )
                 }
+            }
+
+            // --- SECTION PROFIL ---
+            SettingsSection(title = "PROFIL", icon = Icons.Default.Person) {
+                val currentProfile = remember { preferenceManager.getCurrentProfile() }
+                SettingsItem(
+                    icon = Icons.Default.AccountCircle,
+                    iconBackground = Color(0xFFE8F5E9),
+                    iconColor = Color(0xFF43A047),
+                    title = currentProfile?.name ?: "Utilisateur",
+                    subtitle = "Profil actuellement actif",
+                    trailing = {
+                        TextButton(onClick = onNavigateToProfileSelection) {
+                            Text("Changer", color = primaryBlue, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                )
             }
 
             // --- SAUVEGARDE AUTOMATIQUE ---

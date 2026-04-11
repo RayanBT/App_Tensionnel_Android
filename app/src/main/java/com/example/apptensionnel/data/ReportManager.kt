@@ -61,7 +61,12 @@ class ReportManager(private val context: Context) {
         // --- EN-TÊTE DU RAPPORT ---
         canvas.drawText("TensioCare - Rapport Médical", 40f, y, titlePaint)
         y += 30f
-        canvas.drawText("Patient: Jean-Pierre Martin", 40f, y, headerPaint)
+        
+        // Récupération du nom du profil actuel
+        val preferenceManager = PreferenceManager(context)
+        val profileName = preferenceManager.getCurrentProfile()?.name ?: "Utilisateur"
+        
+        canvas.drawText("Patient: $profileName", 40f, y, headerPaint)
         y += 18f
         canvas.drawText("Généré le: ${SimpleDateFormat("dd MMMM yyyy à HH:mm", Locale.FRENCH).format(Date())}", 40f, y, headerPaint)
         y += 40f
