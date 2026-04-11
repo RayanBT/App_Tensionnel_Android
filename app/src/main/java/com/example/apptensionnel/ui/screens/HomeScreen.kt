@@ -1,5 +1,6 @@
 package com.example.apptensionnel.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,13 +37,20 @@ fun HomeScreen(
 ) {
     val measurements by remember { mutableStateOf(preferenceManager.getMeasurements()) }
     val lastMeasurement = measurements.firstOrNull()
+    val context = LocalContext.current
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F7FA))) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { HeaderSection() }
+            item { 
+                HeaderSection(
+                    onNotificationsClick = {
+                        Toast.makeText(context, "Aucune nouvelle notification", Toast.LENGTH_SHORT).show()
+                    }
+                ) 
+            }
 
             item {
                 LastMeasurementCard(lastMeasurement, measurements.getOrNull(1))
@@ -97,7 +106,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun HeaderSection() {
+fun HeaderSection(onNotificationsClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -113,7 +122,7 @@ fun HeaderSection() {
                 Text(text = "Tableau de Bord", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(
-                onClick = { /* Notifications */ },
+                onClick = onNotificationsClick,
                 modifier = Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.2f))
             ) {
                 Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White)

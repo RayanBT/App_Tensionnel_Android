@@ -37,12 +37,23 @@ fun HistoryScreen(
 ) {
     var measurements by remember { mutableStateOf(preferenceManager.getMeasurements()) }
     var searchQuery by remember { mutableStateOf("") }
+    var statusFilter by remember { mutableStateOf<String?>(null) }
+    var showFilterMenu by remember { mutableStateOf(false) }
 
-    val filteredMeasurements = remember(measurements, searchQuery) {
-        if (searchQuery.isEmpty()) measurements
-        else measurements.filter { 
-            it.notes.contains(searchQuery, ignoreCase = true) || 
-            "${it.systolic}/${it.diastolic}".contains(searchQuery)
+    val filteredMeasurements = remember(measurements, searchQuery, statusFilter) {
+        measurements.filter { measurement ->
+            val matchesSearch = if (searchQuery.isEmpty()) true
+            else {
+                measurement.notes.contains(searchQuery, ignoreCase = true) || 
+                "${measurement.systolic}/${measurement.diastolic}".contains(searchQuery)
+            }
+            
+            val matchesStatus = if (statusFilter == null) true
+            else {
+                getStatus(measurement.systolic, measurement.diastolic).label == statusFilter
+            }
+            
+            matchesSearch && matchesStatus
         }
     }
 
@@ -70,13 +81,41 @@ fun HistoryScreen(
                 ) {
                     Column {
                         Text(text = "Historique", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "${measurements.size} mesures enregistrées", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                        Text(
+                            text = if (statusFilter == null) "${measurements.size} mesures enregistrées" 
+                                   else "${filteredMeasurements.size} résultats pour \"$statusFilter\"", 
+                            color = Color.White.copy(alpha = 0.7f), 
+                            fontSize = 14.sp
+                        )
                     }
-                    IconButton(
-                        onClick = { /* Filtres */ },
-                        modifier = Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.2f))
-                    ) {
-                        Icon(Icons.Default.FilterList, contentDescription = null, tint = Color.White)
+                    Box {
+                        IconButton(
+                            onClick = { showFilterMenu = true },
+                            modifier = Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.2f))
+                        ) {
+                            Icon(
+                                if (statusFilter == null) Icons.Default.FilterList else Icons.Default.FilterListOff, 
+                                contentDescription = null, 
+                                tint = Color.White
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showFilterMenu,
+                            onDismissRequest = { showFilterMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Toutes les mesures") },
+                                onClick = { statusFilter = null; showFilterMenu = false },
+                                leadingIcon = { Icon(Icons.Default.AllInclusive, contentDescription = null) }
+                            )
+                            HorizontalDivider()
+                            listOf("Normale", "Élevée", "Hypert. Stade 1", "Hypert. Stade 2", "Crise").forEach { status ->
+                                DropdownMenuItem(
+                                    text = { Text(status) },
+                                    onClick = { statusFilter = status; showFilterMenu = false }
+                                )
+                            }
+                        }
                     }
                 }
                 
@@ -88,6 +127,13 @@ fun HistoryScreen(
                     modifier = Modifier.fillMaxWidth().height(54.dp),
                     placeholder = { Text("Rechercher une mesure...", color = Color.White.copy(alpha = 0.6f)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.6f)) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
+                            }
+                        }
+                    },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.White.copy(alpha = 0.15f),
                         unfocusedContainerColor = Color.White.copy(alpha = 0.15f),
@@ -118,9 +164,18 @@ fun HistoryScreen(
         }
 
         // --- LISTE ---
-        if (measurements.isEmpty()) {
+        if (filteredMeasurements.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "Aucune mesure enregistrée", color = Color.Gray)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(text = "Aucune mesure trouvée", color = Color.Gray)
+                    if (statusFilter != null || searchQuery.isNotEmpty()) {
+                        TextButton(onClick = { statusFilter = null; searchQuery = "" }) {
+                            Text("Réinitialiser les filtres")
+                        }
+                    }
+                }
             }
         } else {
             LazyColumn(

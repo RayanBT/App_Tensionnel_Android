@@ -1,5 +1,9 @@
 package com.example.apptensionnel.ui.screens
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,17 +25,79 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import com.example.apptensionnel.data.NotificationHelper
 import com.example.apptensionnel.data.PreferenceManager
 import com.example.apptensionnel.data.ReportManager
 import com.example.apptensionnel.ui.theme.AppBlue
+import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(preferenceManager: PreferenceManager) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val reportManager = remember { ReportManager(context) }
+    val notificationHelper = remember { NotificationHelper(context) }
     val primaryBlue = AppBlue
     val backgroundColor = Color(0xFFF5F7FA)
+
+    // Permission pour Android 13+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                notificationHelper.sendTestNotification()
+            }
+        }
+    )
+
+    var showTimePicker by remember { mutableStateOf(false) }
+    val currentTime = preferenceManager.reminderTime.split(":")
+    val timePickerState = rememberTimePickerState(
+        initialHour = currentTime.getOrNull(0)?.toInt() ?: 8,
+        initialMinute = currentTime.getOrNull(1)?.toInt() ?: 0,
+        is24Hour = true
+    )
+
+    if (showTimePicker) {
+        Dialog(onDismissRequest = { showTimePicker = false }) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Choisir l'heure du rappel",
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(bottom = 20.dp)
+                    )
+                    TimePicker(state = timePickerState)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showTimePicker = false }) {
+                            Text("Annuler")
+                        }
+                        TextButton(onClick = {
+                            val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", timePickerState.hour, timePickerState.minute)
+                            preferenceManager.reminderTime = formattedTime
+                            showTimePicker = false
+                        }) {
+                            Text("Confirmer")
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -164,7 +230,7 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Surface(
-                        modifier = Modifier.fillMaxWidth().clickable { /* TODO: TimePicker */ },
+                        modifier = Modifier.fillMaxWidth().clickable { showTimePicker = true },
                         color = Color(0xFFF1F4F8),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -183,6 +249,25 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                         }
                     }
                 }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFEEEEEE))
+
+                // BOUTON TEST NOTIFICATION
+                SettingsItem(
+                    icon = Icons.Default.NotificationAdd,
+                    iconBackground = Color(0xFFFFF3E0),
+                    iconColor = Color(0xFFF57C00),
+                    title = "Tester la notification",
+                    subtitle = "Envoyer une notification immédiate",
+                    showArrow = true,
+                    onClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            notificationHelper.sendTestNotification()
+                        }
+                    }
+                )
             }
 
             // --- SECTION DONNÉES & EXPORT ---
@@ -205,6 +290,16 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                     subtitle = "Données brutes pour tableur",
                     showArrow = true,
                     onClick = { reportManager.exportToCSV(preferenceManager.getMeasurements()) }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFEEEEEE))
+                SettingsItem(
+                    icon = Icons.Default.Analytics,
+                    iconBackground = Color(0xFFF3E5F5),
+                    iconColor = Color(0xFF7B1FA2),
+                    title = "Générer des données (DÉMO)",
+                    subtitle = "Ajouter 30 jours de mesures fictives",
+                    showArrow = true,
+                    onClick = { preferenceManager.generateFakeData() }
                 )
             }
 
