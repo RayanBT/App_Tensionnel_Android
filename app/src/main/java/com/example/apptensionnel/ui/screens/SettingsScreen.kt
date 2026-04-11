@@ -1,6 +1,7 @@
 package com.example.apptensionnel.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -16,16 +17,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.apptensionnel.data.PreferenceManager
+import com.example.apptensionnel.data.ReportManager
+import com.example.apptensionnel.ui.theme.AppBlue
 
 @Composable
 fun SettingsScreen(preferenceManager: PreferenceManager) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
-    val primaryBlue = Color(0xFF0D47A1) // Deep blue from mockup
-    val backgroundColor = Color(0xFFF5F7FA) // Light grey/blue background
+    val reportManager = remember { ReportManager(context) }
+    val primaryBlue = AppBlue
+    val backgroundColor = Color(0xFFF5F7FA)
 
     Column(
         modifier = Modifier
@@ -33,7 +39,7 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
             .background(backgroundColor)
             .verticalScroll(scrollState)
     ) {
-        // --- SECTION HEADER BLEU (Image 2) ---
+        // --- SECTION HEADER BLEU ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -59,9 +65,9 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // --- BOUTON ENVOYER MÉDECIN (Image 2) ---
+            // --- BOUTON ENVOYER MÉDECIN ---
             Button(
-                onClick = { /* TODO: Implémenter l'envoi */ },
+                onClick = { reportManager.exportToPDF(preferenceManager.getMeasurements()) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),
@@ -84,7 +90,7 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                 }
             }
 
-            // --- SAUVEGARDE AUTOMATIQUE (Image 1) ---
+            // --- SAUVEGARDE AUTOMATIQUE ---
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
@@ -97,7 +103,7 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                 ) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFF3E5F5), // Light purple background
+                        color = Color(0xFFF3E5F5),
                         modifier = Modifier.size(44.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -158,7 +164,7 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Surface(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().clickable { /* TODO: TimePicker */ },
                         color = Color(0xFFF1F4F8),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -179,45 +185,6 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                 }
             }
 
-            // --- SECTION MON PROFIL ---
-            SettingsSection(title = "MON PROFIL", icon = Icons.Default.Person) {
-                SettingsItem(
-                    icon = Icons.Default.PersonOutline,
-                    iconBackground = Color(0xFFE3F2FD),
-                    iconColor = primaryBlue,
-                    title = "Jean-Pierre Martin",
-                    subtitle = "Né le 12 mars 1952 • Groupe A+"
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFEEEEEE))
-                SettingsItem(
-                    icon = Icons.Default.Medication,
-                    iconBackground = Color(0xFFFFF3E0),
-                    iconColor = Color(0xFFFB8C00),
-                    title = "Médicaments",
-                    subtitle = "Amlodipine 5mg, Bisoprolol 2.5mg"
-                )
-            }
-
-            // --- SECTION URGENCE ---
-            SettingsSection(title = "URGENCE", icon = Icons.Default.WarningAmber) {
-                SettingsItem(
-                    icon = Icons.Default.WarningAmber,
-                    iconBackground = Color(0xFFFFEBEE),
-                    iconColor = Color(0xFFE53935),
-                    title = "Tester l'alerte d'urgence",
-                    subtitle = "Aperçu de la fenêtre d'alerte critique",
-                    showArrow = true
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFEEEEEE))
-                SettingsItem(
-                    icon = Icons.Default.PersonOutline,
-                    iconBackground = Color(0xFFFFEBEE),
-                    iconColor = Color(0xFFE53935),
-                    title = "Contact d'urgence",
-                    subtitle = "Marie Martin — 06 12 34 56 78"
-                )
-            }
-
             // --- SECTION DONNÉES & EXPORT ---
             SettingsSection(title = "DONNÉES & EXPORT", icon = Icons.Default.FileDownload) {
                 SettingsItem(
@@ -226,7 +193,8 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                     iconColor = primaryBlue,
                     title = "Exporter en PDF",
                     subtitle = "Télécharger votre rapport complet",
-                    showArrow = true
+                    showArrow = true,
+                    onClick = { reportManager.exportToPDF(preferenceManager.getMeasurements()) }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFEEEEEE))
                 SettingsItem(
@@ -235,7 +203,8 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                     iconColor = Color(0xFF43A047),
                     title = "Exporter en CSV",
                     subtitle = "Données brutes pour tableur",
-                    showArrow = true
+                    showArrow = true,
+                    onClick = { reportManager.exportToCSV(preferenceManager.getMeasurements()) }
                 )
             }
 
@@ -249,7 +218,6 @@ fun SettingsScreen(preferenceManager: PreferenceManager) {
                     subtitle = "Application de suivi tensionnel"
                 )
                 
-                // Disclaimer Médical
                 Row(modifier = Modifier.padding(16.dp)) {
                     Icon(Icons.Default.MedicalServices, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -303,11 +271,13 @@ fun SettingsItem(
     title: String,
     subtitle: String,
     trailing: @Composable (() -> Unit)? = null,
-    showArrow: Boolean = false
+    showArrow: Boolean = false,
+    onClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
