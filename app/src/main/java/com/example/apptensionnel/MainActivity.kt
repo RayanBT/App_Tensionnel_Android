@@ -46,8 +46,6 @@ fun MainScreen() {
 
     var editingMeasurement by remember { mutableStateOf<Measurement?>(null) }
     
-    // Déterminer la destination de départ : si aucun profil n'existe, aller vers la création. 
-    // Si des profils existent mais aucun n'est sélectionné, aller vers la sélection.
     val profiles = preferenceManager.getProfiles()
     val startRoute = when {
         profiles.isEmpty() -> "add_profile"
@@ -124,6 +122,15 @@ fun MainScreen() {
                     onNavigateToAdd = { 
                         editingMeasurement = null
                         navController.navigate("add_measurement") 
+                    },
+                    onNavigateToHistory = {
+                        navController.navigate(Screen.History.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 ) 
             }
@@ -142,7 +149,6 @@ fun MainScreen() {
                     preferenceManager = preferenceManager,
                     onNavigateToProfileSelection = {
                         navController.navigate("profile_selection") {
-                            // On ne vide pas forcément toute la pile, mais on veut pouvoir revenir ou changer
                             popUpTo(Screen.Home.route) { inclusive = false }
                         }
                     }

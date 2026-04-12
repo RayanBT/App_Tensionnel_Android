@@ -33,7 +33,8 @@ import java.util.*
 @Composable
 fun HomeScreen(
     preferenceManager: PreferenceManager,
-    onNavigateToAdd: () -> Unit
+    onNavigateToAdd: () -> Unit,
+    onNavigateToHistory: () -> Unit
 ) {
     val measurements by remember { mutableStateOf(preferenceManager.getMeasurements()) }
     val lastMeasurement = measurements.firstOrNull()
@@ -86,6 +87,7 @@ fun HomeScreen(
             item {
                 RecentMeasurementsCard(
                     measurements = measurements.take(5),
+                    onSeeAllClick = onNavigateToHistory,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
@@ -277,7 +279,11 @@ fun ReferenceRow(label: String, value: String, color: Color, bgColor: Color) {
 }
 
 @Composable
-fun RecentMeasurementsCard(measurements: List<Measurement>, modifier: Modifier = Modifier) {
+fun RecentMeasurementsCard(
+    measurements: List<Measurement>,
+    onSeeAllClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -291,7 +297,7 @@ fun RecentMeasurementsCard(measurements: List<Measurement>, modifier: Modifier =
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = "Mesures récentes", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                TextButton(onClick = { /* Voir tout */ }, contentPadding = PaddingValues(0.dp)) {
+                TextButton(onClick = onSeeAllClick, contentPadding = PaddingValues(0.dp)) {
                     Text(text = "Voir tout", color = AppBlue)
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = AppBlue, modifier = Modifier.size(20.dp))
                 }

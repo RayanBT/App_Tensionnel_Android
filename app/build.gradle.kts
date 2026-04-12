@@ -50,6 +50,9 @@ dependencies {
     // Ajout de la dépendance pour les graphiques
     implementation(libs.mpandroidchart)
 
+    // WorkManager pour les notifications
+    implementation(libs.androidx.work.runtime.ktx)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

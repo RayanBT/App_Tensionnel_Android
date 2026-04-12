@@ -92,6 +92,10 @@ fun SettingsScreen(
                         TextButton(onClick = {
                             val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", timePickerState.hour, timePickerState.minute)
                             preferenceManager.reminderTime = formattedTime
+                            // PROGRAMMATION DU RAPPEL
+                            if (preferenceManager.isReminderEnabled) {
+                                notificationHelper.scheduleDailyReminder(formattedTime)
+                            }
                             showTimePicker = false
                         }) {
                             Text("Confirmer")
@@ -227,6 +231,11 @@ fun SettingsScreen(
                             onCheckedChange = { 
                                 dailyReminder = it
                                 preferenceManager.isReminderEnabled = it
+                                if (it) {
+                                    notificationHelper.scheduleDailyReminder(preferenceManager.reminderTime)
+                                } else {
+                                    notificationHelper.cancelAllReminders()
+                                }
                             },
                             colors = SwitchDefaults.colors(checkedTrackColor = primaryBlue)
                         )
