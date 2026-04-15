@@ -64,13 +64,13 @@ fun HistoryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // --- HEADER ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(AppBlue)
+                .background(MaterialTheme.colorScheme.primary)
                 .padding(top = 48.dp, bottom = 24.dp, start = 20.dp, end = 20.dp)
         ) {
             Column {
@@ -80,23 +80,23 @@ fun HistoryScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text(text = "Historique", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Historique", color = MaterialTheme.colorScheme.onPrimary, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                         Text(
                             text = if (statusFilter == null) "${measurements.size} mesures enregistrées" 
                                    else "${filteredMeasurements.size} résultats pour \"$statusFilter\"", 
-                            color = Color.White.copy(alpha = 0.7f), 
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f), 
                             fontSize = 14.sp
                         )
                     }
                     Box {
                         IconButton(
                             onClick = { showFilterMenu = true },
-                            modifier = Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.2f))
+                            modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
                         ) {
                             Icon(
                                 if (statusFilter == null) Icons.Default.FilterList else Icons.Default.FilterListOff, 
                                 contentDescription = null, 
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                         DropdownMenu(
@@ -125,22 +125,22 @@ fun HistoryScreen(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth().height(54.dp),
-                    placeholder = { Text("Rechercher une mesure...", color = Color.White.copy(alpha = 0.6f)) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.6f)) },
+                    placeholder = { Text("Rechercher une mesure...", color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
+                                Icon(Icons.Default.Close, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
                             }
                         }
                     },
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White.copy(alpha = 0.15f),
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.15f),
+                        focusedContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f),
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedTextColor = MaterialTheme.colorScheme.onPrimary,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -153,11 +153,11 @@ fun HistoryScreen(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.TouchApp, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(14.dp))
+            Icon(Icons.Default.TouchApp, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "Appui long pour modifier • Balayez pour supprimer",
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -167,9 +167,9 @@ fun HistoryScreen(
         if (filteredMeasurements.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
+                    Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "Aucune mesure trouvée", color = Color.Gray)
+                    Text(text = "Aucune mesure trouvée", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (statusFilter != null || searchQuery.isNotEmpty()) {
                         TextButton(onClick = { statusFilter = null; searchQuery = "" }) {
                             Text("Réinitialiser les filtres")
@@ -187,7 +187,7 @@ fun HistoryScreen(
                         Text(
                             text = date,
                             modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp),
-                            color = Color.LightGray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -289,7 +289,7 @@ fun HistoryItemCard(
                 onLongClick = { onEditRequest() }
             ),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -302,7 +302,7 @@ fun HistoryItemCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = SimpleDateFormat("HH:mm", Locale.FRENCH).format(Date(measurement.date)),
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
                 }
@@ -310,11 +310,11 @@ fun HistoryItemCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(text = "${measurement.systolic}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = AppBlue)
-                    Text(text = " / ", fontSize = 20.sp, color = Color.LightGray)
-                    Text(text = "${measurement.diastolic}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = AppBlue)
+                    Text(text = "${measurement.systolic}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(text = " / ", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                    Text(text = "${measurement.diastolic}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "mmHg", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp))
+                    Text(text = "mmHg", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp))
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -322,7 +322,7 @@ fun HistoryItemCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Favorite, contentDescription = null, tint = StatusCrisis, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "${measurement.pulse} bpm", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text(text = "${measurement.pulse} bpm", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.width(12.dp))
                     
                     Box(
@@ -337,19 +337,18 @@ fun HistoryItemCard(
                 
                 if (measurement.notes.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = "\"${measurement.notes}\"", color = Color.Gray, fontSize = 13.sp)
+                    Text(text = "\"${measurement.notes}\"", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                 }
             }
             
-            // Icône Édition plus explicite
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
                     Icons.Default.EditNote,
                     contentDescription = "Éditer (Appui long)",
-                    tint = Color(0xFFE0E0E0),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
                     modifier = Modifier.size(28.dp)
                 )
-                Text("ÉDITER", fontSize = 9.sp, color = Color.LightGray, fontWeight = FontWeight.Bold)
+                Text("ÉDITER", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), fontWeight = FontWeight.Bold)
             }
         }
     }

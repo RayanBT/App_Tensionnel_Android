@@ -4,25 +4,32 @@ import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.MonitorWeight
+import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import com.example.apptensionnel.data.PreferenceManager
 import com.example.apptensionnel.data.models.Measurement
-import com.example.apptensionnel.ui.theme.AppBlue
 import com.example.apptensionnel.ui.theme.StatusCrisis
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
@@ -30,17 +37,18 @@ import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun TrendsScreen(preferenceManager: PreferenceManager) {
-    // On récupère toutes les mesures une fois (ordre chronologique pour le graph)
     val allMeasurements = remember { preferenceManager.getMeasurements().reversed() }
     val scrollState = rememberScrollState()
     var selectedPeriod by remember { mutableStateOf("7 jours") }
+    var selectedMeasurement by remember { mutableStateOf<Measurement?>(null) }
 
-    // Filtrage dynamique selon la période choisie
     val filteredMeasurements = remember(allMeasurements, selectedPeriod) {
         val days = when (selectedPeriod) {
             "7 jours" -> 7
@@ -52,22 +60,28 @@ fun TrendsScreen(preferenceManager: PreferenceManager) {
         allMeasurements.filter { it.date >= cutoff }
     }
 
+    if (selectedMeasurement != null) {
+        MeasurementDetailDialog(
+            measurement = selectedMeasurement!!,
+            onDismiss = { selectedMeasurement = null }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
     ) {
-        // Header (Bleu)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(AppBlue)
+                .background(MaterialTheme.colorScheme.primary)
                 .padding(top = 48.dp, bottom = 32.dp, start = 24.dp, end = 24.dp)
         ) {
             Column {
-                Text(text = "Tendances", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text(text = "Évolution de votre tension artérielle", color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
+                Text(text = "Tendances", color = MaterialTheme.colorScheme.onPrimary, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Évolution de votre tension artérielle", color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f), fontSize = 16.sp)
             }
         }
 
@@ -75,11 +89,10 @@ fun TrendsScreen(preferenceManager: PreferenceManager) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Sélecteur de Période
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Row(modifier = Modifier.padding(4.dp)) {
                     listOf("7 jours", "30 jours", "90 jours").forEach { period ->
@@ -89,8 +102,8 @@ fun TrendsScreen(preferenceManager: PreferenceManager) {
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSelected) AppBlue else Color.Transparent,
-                                contentColor = if (isSelected) Color.White else Color.Gray
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             elevation = null
                         ) {
@@ -100,25 +113,28 @@ fun TrendsScreen(preferenceManager: PreferenceManager) {
                 }
             }
 
-            // Graphique Tension
-            ChartCard(title = "Tension Artérielle") {
+            ChartCard(
+                title = "Tension Artérielle",
+                subtitle = "Appuyez sur un point pour voir les détails"
+            ) {
                 if (filteredMeasurements.isEmpty()) {
                     EmptyStatePlaceholder()
                 } else {
-                    TensionChart(filteredMeasurements)
+                    TensionChart(filteredMeasurements) { selectedMeasurement = it }
                 }
             }
 
-            // Graphique Pouls
-            ChartCard(title = "Fréquence cardiaque") {
+            ChartCard(
+                title = "Fréquence cardiaque",
+                subtitle = "Appuyez sur un point pour voir les détails"
+            ) {
                 if (filteredMeasurements.isEmpty()) {
                     EmptyStatePlaceholder()
                 } else {
-                    PulseChart(filteredMeasurements)
+                    PulseChart(filteredMeasurements) { selectedMeasurement = it }
                 }
             }
 
-            // Moyennes Systolique/Diastolique
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 StatCard(
                     title = "MOY. SYSTOLIQUE",
@@ -136,19 +152,18 @@ fun TrendsScreen(preferenceManager: PreferenceManager) {
                 )
             }
 
-            // Fréquence Cardiaque Moyenne
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "FRÉQUENCE CARDIAQUE MOYENNE", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "FRÉQUENCE CARDIAQUE MOYENNE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFFFEBEE),
+                            color = StatusCrisis.copy(alpha = 0.1f),
                             modifier = Modifier.size(52.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -164,7 +179,7 @@ fun TrendsScreen(preferenceManager: PreferenceManager) {
                                     fontWeight = FontWeight.Bold,
                                     color = StatusCrisis
                                 )
-                                Text(text = " bpm", color = Color.Gray, modifier = Modifier.padding(bottom = 6.dp))
+                                Text(text = " bpm", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF43A047), modifier = Modifier.size(16.dp))
@@ -181,14 +196,17 @@ fun TrendsScreen(preferenceManager: PreferenceManager) {
 }
 
 @Composable
-fun ChartCard(title: String, content: @Composable () -> Unit) {
+fun ChartCard(title: String, subtitle: String? = null, content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, fontWeight = FontWeight.Bold, color = Color.DarkGray, fontSize = 16.sp)
+            Text(text = title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp)
+            if (subtitle != null) {
+                Text(text = subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), fontSize = 12.sp)
+            }
             Spacer(modifier = Modifier.height(20.dp))
             content()
         }
@@ -200,14 +218,14 @@ fun StatCard(title: String, value: String, unit: String, trend: String, modifier
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+            Text(text = title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(text = value, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = AppBlue)
-                Text(text = " $unit", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 6.dp))
+                Text(text = value, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(text = " $unit", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -224,14 +242,16 @@ fun EmptyStatePlaceholder() {
         modifier = Modifier.fillMaxWidth().height(150.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = "Aucune donnée disponible", color = Color.LightGray)
+        Text(text = "Aucune donnée disponible", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
     }
 }
 
 @Composable
-fun TensionChart(measurements: List<Measurement>) {
-    val sysColor = AppBlue.toArgb()
+fun TensionChart(measurements: List<Measurement>, onValueSelected: (Measurement) -> Unit) {
+    val sysColor = MaterialTheme.colorScheme.primary.toArgb()
     val diaColor = StatusCrisis.toArgb()
+    val textColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
+    val gridColor = MaterialTheme.colorScheme.outlineVariant.toArgb()
     
     AndroidView(
         factory = { context ->
@@ -239,13 +259,28 @@ fun TensionChart(measurements: List<Measurement>) {
                 layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 450)
                 description.isEnabled = false
                 legend.isEnabled = true
+                legend.textColor = textColor
                 xAxis.position = XAxis.XAxisPosition.BOTTOM
                 xAxis.setDrawGridLines(false)
+                xAxis.textColor = textColor
                 axisRight.isEnabled = false
                 axisLeft.setDrawGridLines(true)
-                axisLeft.gridColor = Color.LightGray.copy(alpha = 0.3f).toArgb()
+                axisLeft.gridColor = gridColor
+                axisLeft.textColor = textColor
                 setTouchEnabled(true)
                 setScaleEnabled(false)
+                
+                setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
+                    override fun onValueSelected(e: Entry?, h: Highlight?) {
+                        e?.let {
+                            val index = it.x.toInt()
+                            if (index in measurements.indices) {
+                                onValueSelected(measurements[index])
+                            }
+                        }
+                    }
+                    override fun onNothingSelected() {}
+                })
             }
         },
         update = { chart ->
@@ -263,6 +298,8 @@ fun TensionChart(measurements: List<Measurement>) {
                 setDrawFilled(false)
                 valueTextSize = 0f
                 mode = LineDataSet.Mode.CUBIC_BEZIER
+                highLightColor = sysColor
+                setDrawHighlightIndicators(true)
             }
             
             val diaDataSet = LineDataSet(diaEntries, "Diastolique").apply {
@@ -274,6 +311,8 @@ fun TensionChart(measurements: List<Measurement>) {
                 setDrawFilled(false)
                 valueTextSize = 0f
                 mode = LineDataSet.Mode.CUBIC_BEZIER
+                highLightColor = diaColor
+                setDrawHighlightIndicators(true)
             }
             
             chart.data = LineData(sysDataSet, diaDataSet)
@@ -290,8 +329,10 @@ fun TensionChart(measurements: List<Measurement>) {
 }
 
 @Composable
-fun PulseChart(measurements: List<Measurement>) {
+fun PulseChart(measurements: List<Measurement>, onValueSelected: (Measurement) -> Unit) {
     val pulseColor = Color(0xFFFB8C00).toArgb()
+    val textColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
+    val gridColor = MaterialTheme.colorScheme.outlineVariant.toArgb()
     
     AndroidView(
         factory = { context ->
@@ -301,10 +342,24 @@ fun PulseChart(measurements: List<Measurement>) {
                 legend.isEnabled = false
                 xAxis.position = XAxis.XAxisPosition.BOTTOM
                 xAxis.setDrawGridLines(false)
+                xAxis.textColor = textColor
                 axisRight.isEnabled = false
                 axisLeft.setDrawGridLines(true)
-                axisLeft.gridColor = Color.LightGray.copy(alpha = 0.3f).toArgb()
+                axisLeft.gridColor = gridColor
+                axisLeft.textColor = textColor
                 setTouchEnabled(true)
+                
+                setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
+                    override fun onValueSelected(e: Entry?, h: Highlight?) {
+                        e?.let {
+                            val index = it.x.toInt()
+                            if (index in measurements.indices) {
+                                onValueSelected(measurements[index])
+                            }
+                        }
+                    }
+                    override fun onNothingSelected() {}
+                })
             }
         },
         update = { chart ->
@@ -319,6 +374,8 @@ fun PulseChart(measurements: List<Measurement>) {
                 setDrawValues(false)
                 setDrawFilled(false)
                 mode = LineDataSet.Mode.CUBIC_BEZIER
+                highLightColor = pulseColor
+                setDrawHighlightIndicators(true)
             }
             
             chart.data = LineData(dataSet)
@@ -332,4 +389,112 @@ fun PulseChart(measurements: List<Measurement>) {
         },
         modifier = Modifier.fillMaxWidth().height(180.dp)
     )
+}
+
+@Composable
+fun MeasurementDetailDialog(measurement: Measurement, onDismiss: () -> Unit) {
+    val status = getStatus(measurement.systolic, measurement.diastolic)
+    val sdfDate = SimpleDateFormat("EEEE d MMMM yyyy", Locale.FRENCH)
+    val sdfTime = SimpleDateFormat("HH:mm", Locale.FRENCH)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Détails de la mesure",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(status.bgColor)
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(text = status.label, color = status.color, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DetailItem(
+                        label = "SYSTOLIQUE",
+                        value = "${measurement.systolic}",
+                        unit = "mmHg",
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Box(modifier = Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                    DetailItem(
+                        label = "DIASTOLIQUE",
+                        value = "${measurement.diastolic}",
+                        unit = "mmHg",
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                DetailInfoRow(Icons.Default.Favorite, "Pouls", "${measurement.pulse} bpm", StatusCrisis)
+                DetailInfoRow(Icons.Default.CalendarMonth, "Date", sdfDate.format(Date(measurement.date)).replaceFirstChar { it.uppercase() })
+                DetailInfoRow(Icons.Default.AccessTime, "Heure", sdfTime.format(Date(measurement.date)))
+                
+                if (measurement.notes.isNotEmpty()) {
+                    DetailInfoRow(Icons.Default.Notes, "Notes", measurement.notes)
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Fermer")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DetailItem(label: String, value: String, unit: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(text = value, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(text = " $unit", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
+        }
+    }
+}
+
+@Composable
+fun DetailInfoRow(icon: ImageVector, label: String, value: String, iconColor: Color = MaterialTheme.colorScheme.primary) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(text = "$label : ", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+    }
 }

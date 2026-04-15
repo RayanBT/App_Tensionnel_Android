@@ -29,21 +29,24 @@ import androidx.compose.ui.window.Dialog
 import com.example.apptensionnel.data.NotificationHelper
 import com.example.apptensionnel.data.PreferenceManager
 import com.example.apptensionnel.data.ReportManager
-import com.example.apptensionnel.ui.theme.AppBlue
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     preferenceManager: PreferenceManager,
-    onNavigateToProfileSelection: () -> Unit = {}
+    onNavigateToProfileSelection: () -> Unit = {},
+    onThemeChanged: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val reportManager = remember { ReportManager(context) }
     val notificationHelper = remember { NotificationHelper(context) }
-    val primaryBlue = AppBlue
-    val backgroundColor = Color(0xFFF5F7FA)
+    
+    // On utilise les couleurs du thème Material au lieu de hardcoder le bleu
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val surfaceColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
 
     // Permission pour Android 13+
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -92,7 +95,6 @@ fun SettingsScreen(
                         TextButton(onClick = {
                             val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", timePickerState.hour, timePickerState.minute)
                             preferenceManager.reminderTime = formattedTime
-                            // PROGRAMMATION DU RAPPEL
                             if (preferenceManager.isReminderEnabled) {
                                 notificationHelper.scheduleDailyReminder(formattedTime)
                             }
@@ -112,23 +114,23 @@ fun SettingsScreen(
             .background(backgroundColor)
             .verticalScroll(scrollState)
     ) {
-        // --- SECTION HEADER BLEU ---
+        // --- SECTION HEADER ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(primaryBlue)
+                .background(primaryColor)
                 .padding(top = 48.dp, bottom = 32.dp, start = 24.dp, end = 24.dp)
         ) {
             Column {
                 Text(
                     text = "Paramètres",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Gérez vos préférences et données",
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                     fontSize = 16.sp
                 )
             }
@@ -145,7 +147,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .height(60.dp),
                 shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = primaryBlue),
+                colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -163,18 +165,67 @@ fun SettingsScreen(
                 }
             }
 
+            // --- SECTION APPARENCE ---
+            SettingsSection(title = "APPARENCE", icon = Icons.Default.Palette) {
+                var selectedTheme by remember { mutableIntStateOf(preferenceManager.themeMode) }
+                
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = "Thème de l'application", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ThemeOptionCard(
+                            title = "Auto",
+                            icon = Icons.Default.BrightnessAuto,
+                            isSelected = selectedTheme == 0,
+                            modifier = Modifier.weight(1f),
+                            onClick = { 
+                                selectedTheme = 0
+                                preferenceManager.themeMode = 0
+                                onThemeChanged(0)
+                            }
+                        )
+                        ThemeOptionCard(
+                            title = "Clair",
+                            icon = Icons.Default.LightMode,
+                            isSelected = selectedTheme == 1,
+                            modifier = Modifier.weight(1f),
+                            onClick = { 
+                                selectedTheme = 1
+                                preferenceManager.themeMode = 1
+                                onThemeChanged(1)
+                            }
+                        )
+                        ThemeOptionCard(
+                            title = "Sombre",
+                            icon = Icons.Default.DarkMode,
+                            isSelected = selectedTheme == 2,
+                            modifier = Modifier.weight(1f),
+                            onClick = { 
+                                selectedTheme = 2
+                                preferenceManager.themeMode = 2
+                                onThemeChanged(2)
+                            }
+                        )
+                    }
+                }
+            }
+
             // --- SECTION PROFIL ---
             SettingsSection(title = "PROFIL", icon = Icons.Default.Person) {
                 val currentProfile = remember { preferenceManager.getCurrentProfile() }
                 SettingsItem(
                     icon = Icons.Default.AccountCircle,
-                    iconBackground = Color(0xFFE8F5E9),
-                    iconColor = Color(0xFF43A047),
+                    iconBackground = MaterialTheme.colorScheme.secondaryContainer,
+                    iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     title = currentProfile?.name ?: "Utilisateur",
                     subtitle = "Profil actuellement actif",
                     trailing = {
                         TextButton(onClick = onNavigateToProfileSelection) {
-                            Text("Changer", color = primaryBlue, fontWeight = FontWeight.Bold)
+                            Text("Changer", fontWeight = FontWeight.Bold)
                         }
                     }
                 )
@@ -184,7 +235,7 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 var backupEnabled by remember { mutableStateOf(preferenceManager.isBackupEnabled) }
                 Row(
@@ -193,11 +244,11 @@ fun SettingsScreen(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFF3E5F5),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
                         modifier = Modifier.size(44.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.Shield, contentDescription = null, tint = Color(0xFF7B1FA2))
+                            Icon(Icons.Outlined.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
                         }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -210,8 +261,7 @@ fun SettingsScreen(
                         onCheckedChange = { 
                             backupEnabled = it
                             preferenceManager.isBackupEnabled = it
-                        },
-                        colors = SwitchDefaults.colors(checkedTrackColor = primaryBlue)
+                        }
                     )
                 }
             }
@@ -221,8 +271,8 @@ fun SettingsScreen(
                 var dailyReminder by remember { mutableStateOf(preferenceManager.isReminderEnabled) }
                 SettingsItem(
                     icon = Icons.Default.NotificationsNone,
-                    iconBackground = Color(0xFFE3F2FD),
-                    iconColor = primaryBlue,
+                    iconBackground = MaterialTheme.colorScheme.primaryContainer,
+                    iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     title = "Rappel quotidien",
                     subtitle = "Me rappeler de mesurer ma tension",
                     trailing = {
@@ -236,19 +286,18 @@ fun SettingsScreen(
                                 } else {
                                     notificationHelper.cancelAllReminders()
                                 }
-                            },
-                            colors = SwitchDefaults.colors(checkedTrackColor = primaryBlue)
+                            }
                         )
                     }
                 )
                 
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFEEEEEE))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = Color(0xFFE3F2FD), modifier = Modifier.size(40.dp)) {
+                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.AccessTime, contentDescription = null, tint = primaryBlue, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.AccessTime, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
                             }
                         }
                         Spacer(modifier = Modifier.width(16.dp))
@@ -260,7 +309,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Surface(
                         modifier = Modifier.fillMaxWidth().clickable { showTimePicker = true },
-                        color = Color(0xFFF1F4F8),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
@@ -272,20 +321,19 @@ fun SettingsScreen(
                                 text = preferenceManager.reminderTime,
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = primaryBlue
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Icon(Icons.Default.AccessTime, contentDescription = null, tint = Color.LightGray)
                         }
                     }
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFEEEEEE))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
-                // BOUTON TEST NOTIFICATION
                 SettingsItem(
                     icon = Icons.Default.NotificationAdd,
-                    iconBackground = Color(0xFFFFF3E0),
-                    iconColor = Color(0xFFF57C00),
+                    iconBackground = MaterialTheme.colorScheme.secondaryContainer,
+                    iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     title = "Tester la notification",
                     subtitle = "Envoyer une notification immédiate",
                     showArrow = true,
@@ -303,28 +351,28 @@ fun SettingsScreen(
             SettingsSection(title = "DONNÉES & EXPORT", icon = Icons.Default.FileDownload) {
                 SettingsItem(
                     icon = Icons.Default.PictureAsPdf,
-                    iconBackground = Color(0xFFE3F2FD),
-                    iconColor = primaryBlue,
+                    iconBackground = MaterialTheme.colorScheme.primaryContainer,
+                    iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     title = "Exporter en PDF",
                     subtitle = "Télécharger votre rapport complet",
                     showArrow = true,
                     onClick = { reportManager.exportToPDF(preferenceManager.getMeasurements()) }
                 )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFEEEEEE))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
                 SettingsItem(
                     icon = Icons.Default.Description,
-                    iconBackground = Color(0xFFE8F5E9),
-                    iconColor = Color(0xFF43A047),
+                    iconBackground = MaterialTheme.colorScheme.secondaryContainer,
+                    iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     title = "Exporter en CSV",
                     subtitle = "Données brutes pour tableur",
                     showArrow = true,
                     onClick = { reportManager.exportToCSV(preferenceManager.getMeasurements()) }
                 )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFEEEEEE))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
                 SettingsItem(
                     icon = Icons.Default.Analytics,
-                    iconBackground = Color(0xFFF3E5F5),
-                    iconColor = Color(0xFF7B1FA2),
+                    iconBackground = MaterialTheme.colorScheme.tertiaryContainer,
+                    iconColor = MaterialTheme.colorScheme.onTertiaryContainer,
                     title = "Générer des données (DÉMO)",
                     subtitle = "Ajouter 30 jours de mesures fictives",
                     showArrow = true,
@@ -336,8 +384,8 @@ fun SettingsScreen(
             SettingsSection(title = "À PROPOS", icon = Icons.Default.Info) {
                 SettingsItem(
                     icon = Icons.Default.Info,
-                    iconBackground = Color(0xFFF5F5F5),
-                    iconColor = Color.Gray,
+                    iconBackground = MaterialTheme.colorScheme.surfaceVariant,
+                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     title = "TensioCare v2.1.0",
                     subtitle = "Application de suivi tensionnel"
                 )
@@ -355,6 +403,42 @@ fun SettingsScreen(
             }
             
             Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun ThemeOptionCard(
+    title: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(80.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Icon(
+                icon, 
+                contentDescription = null, 
+                tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            )
         }
     }
 }
@@ -379,7 +463,7 @@ fun SettingsSection(title: String, icon: ImageVector, content: @Composable Colum
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(content = content)

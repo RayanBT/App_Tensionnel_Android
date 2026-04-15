@@ -33,12 +33,10 @@ class ReportManager(private val context: Context) {
 
     fun exportToPDF(measurements: List<Measurement>) {
         val pdfDocument = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 Size
-        val page = pdfDocument.startPage(pageInfo)
-        val canvas = page.canvas
-        val paint = Paint()
+        
+        // Configuration des paints
         val titlePaint = Paint().apply {
-            color = Color.parseColor("#0D47A1") // AppBlue
+            color = Color.parseColor("#0D47A1")
             textSize = 24f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
@@ -55,58 +53,104 @@ class ReportManager(private val context: Context) {
             color = Color.BLACK
             textSize = 10f
         }
+        val bgPaint = Paint()
 
-        var y = 60f
-
-        // --- EN-TÊTE DU RAPPORT ---
-        canvas.drawText("TensioCare - Rapport Médical", 40f, y, titlePaint)
-        y += 30f
-        
-        // Récupération du nom du profil actuel
         val preferenceManager = PreferenceManager(context)
         val profileName = preferenceManager.getCurrentProfile()?.name ?: "Utilisateur"
+        val generationDate = SimpleDateFormat("dd MMMM yyyy à HH:mm", Locale.FRENCH).format(Date())
+
+        // Calcul des moyennes
+        val hasData = measurements.isNotEmpty()
+        val avgSys = if (hasData) measurements.map { it.systolic }.average().toInt() else 0
+        val avgDia = if (hasData) measurements.map { it.diastolic }.average().toInt() else 0
+        val avgPulse = if (hasData) measurements.map { it.pulse }.average().toInt() else 0
+
+        // Pagination
+        val itemsPerPage = 25
+        val chunks = measurements.chunked(itemsPerPage)
+        val totalPages = if (chunks.isEmpty()) 1 else chunks.size
+
+        if (chunks.isEmpty()) {
+            drawPage(pdfDocument, 1, totalPages, emptyList(), profileName, generationDate, avgSys, avgDia, avgPulse, titlePaint, headerPaint, tableHeaderPaint, textPaint, bgPaint)
+        } else {
+            chunks.forEachIndexed { index, pageItems ->
+                drawPage(pdfDocument, index + 1, totalPages, pageItems, profileName, generationDate, avgSys, avgDia, avgPulse, titlePaint, headerPaint, tableHeaderPaint, textPaint, bgPaint)
+            }
+        }
+
+        val fileName = "Rapport_Tension_${getCurrentDate()}.pdf"
+        val file = File(getReportsDir(), fileName)
         
+        try {
+            FileOutputStream(file).use { out ->
+                pdfDocument.writeTo(out)
+            }
+        } finally {
+            pdfDocument.close()
+        }
+
+        shareFile(file, "application/pdf")
+    }
+
+    private fun drawPage(
+        pdfDocument: PdfDocument,
+        pageNumber: Int,
+        totalPages: Int,
+        items: List<Measurement>,
+        profileName: String,
+        generationDate: String,
+        avgSys: Int,
+        avgDia: Int,
+        avgPulse: Int,
+        titlePaint: Paint,
+        headerPaint: Paint,
+        tableHeaderPaint: Paint,
+        textPaint: Paint,
+        bgPaint: Paint
+    ) {
+        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
+        val page = pdfDocument.startPage(pageInfo)
+        val canvas = page.canvas
+        var y = 60f
+
+        // Header
+        canvas.drawText("TensioCare - Rapport Médical", 40f, y, titlePaint)
+        y += 30f
         canvas.drawText("Patient: $profileName", 40f, y, headerPaint)
         y += 18f
-        canvas.drawText("Généré le: ${SimpleDateFormat("dd MMMM yyyy à HH:mm", Locale.FRENCH).format(Date())}", 40f, y, headerPaint)
+        canvas.drawText("Généré le: $generationDate", 40f, y, headerPaint)
         y += 40f
 
-        // --- STATISTIQUES RÉCAPITULATIVES ---
-        if (measurements.isNotEmpty()) {
-            val avgSys = measurements.map { it.systolic }.average().toInt()
-            val avgDia = measurements.map { it.diastolic }.average().toInt()
-            val avgPulse = measurements.map { it.pulse }.average().toInt()
-
-            paint.color = Color.parseColor("#F5F7FA")
-            canvas.drawRect(40f, y, 555f, y + 60f, paint)
+        // Stats (uniquement sur la première page)
+        if (pageNumber == 1 && items.isNotEmpty()) {
+            bgPaint.color = Color.parseColor("#F5F7FA")
+            canvas.drawRect(40f, y, 555f, y + 60f, bgPaint)
             
-            paint.color = Color.BLACK
-            paint.textSize = 12f
-            paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            canvas.drawText("MOYENNES SUR LA PÉRIODE", 55f, y + 25f, paint)
+            bgPaint.color = Color.BLACK
+            bgPaint.textSize = 12f
+            bgPaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            canvas.drawText("MOYENNES SUR LA PÉRIODE", 55f, y + 25f, bgPaint)
             
-            paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            paint.textSize = 11f
-            canvas.drawText("Tension: $avgSys / $avgDia mmHg", 55f, y + 45f, paint)
-            canvas.drawText("Pouls: $avgPulse bpm", 350f, y + 45f, paint)
+            bgPaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            bgPaint.textSize = 11f
+            canvas.drawText("Tension: $avgSys / $avgDia mmHg", 55f, y + 45f, bgPaint)
+            canvas.drawText("Pouls: $avgPulse bpm", 350f, y + 45f, bgPaint)
             y += 90f
         }
 
-        // --- TABLEAU DES MESURES ---
-        // Header du tableau
-        paint.color = Color.parseColor("#0D47A1")
-        canvas.drawRect(40f, y, 555f, y + 25f, paint)
+        // Tableau
+        bgPaint.color = Color.parseColor("#0D47A1")
+        canvas.drawRect(40f, y, 555f, y + 25f, bgPaint)
         canvas.drawText("DATE & HEURE", 50f, y + 17f, tableHeaderPaint)
         canvas.drawText("SYS/DIA", 200f, y + 17f, tableHeaderPaint)
         canvas.drawText("POULS", 300f, y + 17f, tableHeaderPaint)
         canvas.drawText("NOTES", 380f, y + 17f, tableHeaderPaint)
         y += 25f
 
-        // Lignes du tableau
-        measurements.take(25).forEachIndexed { index, m ->
+        items.forEachIndexed { index, m ->
             if (index % 2 == 1) {
-                paint.color = Color.parseColor("#F9F9F9")
-                canvas.drawRect(40f, y, 555f, y + 22f, paint)
+                bgPaint.color = Color.parseColor("#F9F9F9")
+                canvas.drawRect(40f, y, 555f, y + 22f, bgPaint)
             }
             
             val dateTime = SimpleDateFormat("dd/MM/yy HH:mm", Locale.FRENCH).format(Date(m.date))
@@ -116,30 +160,20 @@ class ReportManager(private val context: Context) {
             
             val note = if (m.notes.length > 30) m.notes.take(27) + "..." else m.notes
             canvas.drawText(note, 380f, y + 15f, textPaint)
-            
             y += 22f
-            
-            // Gestion simplifiée de la pagination (limitée à 25 mesures pour cet exemple)
-            if (y > 780f) return@forEachIndexed 
         }
 
         // Pied de page
-        paint.color = Color.LTGRAY
-        canvas.drawLine(40f, 800f, 555f, 800f, paint)
+        bgPaint.color = Color.LTGRAY
+        canvas.drawLine(40f, 800f, 555f, 800f, bgPaint)
+        canvas.drawText("Page $pageNumber / $totalPages", 500f, 815f, textPaint)
         canvas.drawText("Ce document est un outil de suivi personnel et ne remplace pas une consultation médicale.", 40f, 815f, textPaint)
 
         pdfDocument.finishPage(page)
-
-        val fileName = "Rapport_Tension_${getCurrentDate()}.pdf"
-        val file = File(getReportsDir(), fileName)
-        pdfDocument.writeTo(FileOutputStream(file))
-        pdfDocument.close()
-
-        shareFile(file, "application/pdf")
     }
 
     private fun getReportsDir(): File {
-        val dir = File(context.cacheDir, "reports")
+        val dir = File(context.externalCacheDir, "reports")
         if (!dir.exists()) dir.mkdirs()
         return dir
     }
@@ -153,7 +187,7 @@ class ReportManager(private val context: Context) {
     private fun shareFile(file: File, mimeType: String) {
         val uri: Uri = FileProvider.getUriForFile(
             context,
-            "${context.packageName}.fileprovider",
+            "com.example.apptensionnel.fileprovider",
             file
         )
 
@@ -162,7 +196,11 @@ class ReportManager(private val context: Context) {
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Partager le rapport"))
+        
+        // Correction cruciale : ajouter FLAG_ACTIVITY_NEW_TASK car le contexte peut être une application
+        val chooser = Intent.createChooser(intent, "Partager le rapport")
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
     }
 
     private fun getCurrentDate(): String {

@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
@@ -29,17 +30,34 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AppTensionnelTheme {
-                MainScreen()
+            val context = LocalContext.current
+            val preferenceManager = remember { PreferenceManager(context) }
+            
+            // Observer le changement de thème en temps réel
+            var themeMode by remember { mutableIntStateOf(preferenceManager.themeMode) }
+            
+            // Déterminer si on doit être en mode sombre
+            val isDarkTheme = when (themeMode) {
+                1 -> false // Light
+                2 -> true  // Dark
+                else -> isSystemInDarkTheme() // Auto
+            }
+
+            AppTensionnelTheme(darkTheme = isDarkTheme) {
+                MainScreen(
+                    preferenceManager = preferenceManager,
+                    onThemeChanged = { newMode -> themeMode = newMode }
+                )
             }
         }
     }
 }
 
 @Composable
-fun MainScreen() {
-    val context = LocalContext.current
-    val preferenceManager = remember { PreferenceManager(context) }
+fun MainScreen(
+    preferenceManager: PreferenceManager,
+    onThemeChanged: (Int) -> Unit
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -151,7 +169,8 @@ fun MainScreen() {
                         navController.navigate("profile_selection") {
                             popUpTo(Screen.Home.route) { inclusive = false }
                         }
-                    }
+                    },
+                    onThemeChanged = onThemeChanged
                 ) 
             }
             

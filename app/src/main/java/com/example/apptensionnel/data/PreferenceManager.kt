@@ -20,7 +20,12 @@ class PreferenceManager(context: Context) {
         private const val KEY_MEASUREMENTS = "measurements"
         private const val KEY_PROFILES = "profiles"
         private const val KEY_CURRENT_PROFILE_ID = "current_profile_id"
+        private const val KEY_THEME_MODE = "theme_mode" // 0: Auto, 1: Light, 2: Dark
     }
+
+    var themeMode: Int
+        get() = sharedPreferences.getInt(KEY_THEME_MODE, 0)
+        set(value) = sharedPreferences.edit { putInt(KEY_THEME_MODE, value) }
 
     var currentProfileId: String?
         get() = sharedPreferences.getString(KEY_CURRENT_PROFILE_ID, null)

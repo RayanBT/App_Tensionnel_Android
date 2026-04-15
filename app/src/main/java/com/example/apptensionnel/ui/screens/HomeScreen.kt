@@ -1,10 +1,12 @@
 package com.example.apptensionnel.ui.screens
 
-import android.widget.Toast
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,7 +17,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.apptensionnel.data.NotificationHelper
 import com.example.apptensionnel.data.PreferenceManager
 import com.example.apptensionnel.data.models.Measurement
 import com.example.apptensionnel.ui.theme.*
@@ -36,37 +40,57 @@ fun HomeScreen(
     onNavigateToAdd: () -> Unit,
     onNavigateToHistory: () -> Unit
 ) {
-    val measurements by remember { mutableStateOf(preferenceManager.getMeasurements()) }
-    val lastMeasurement = measurements.firstOrNull()
     val context = LocalContext.current
-    val currentProfile = remember { preferenceManager.getCurrentProfile() }
+    val notificationHelper = remember { NotificationHelper(context) }
+    
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                notificationHelper.sendTestNotification()
+            }
+        }
+    )
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F7FA))) {
+    val measurements = preferenceManager.getMeasurements().sortedByDescending { it.date }
+    val current = measurements.firstOrNull()
+    val previous = measurements.getOrNull(1)
+
+    val avg7 = remember(measurements) { calculateAverage(measurements, 7) }
+    val avg30 = remember(measurements) { calculateAverage(measurements, 30) }
+
+    val profile = preferenceManager.getCurrentProfile()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
-            item { 
+            item {
                 HeaderSection(
-                    profileName = currentProfile?.name ?: "Utilisateur",
+                    profileName = profile?.name ?: "Utilisateur",
                     onNotificationsClick = {
-                        Toast.makeText(context, "Aucune nouvelle notification", Toast.LENGTH_SHORT).show()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            notificationHelper.sendTestNotification()
+                        }
                     }
-                ) 
+                )
             }
 
-            item {
-                LastMeasurementCard(lastMeasurement, measurements.getOrNull(1))
-            }
+            item { LastMeasurementCard(current, previous) }
 
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    val avg7 = calculateAverage(measurements, 7)
-                    val avg30 = calculateAverage(measurements, 30)
-
                     SummaryCard(
                         label = "Moy. 7 jours",
                         value = if (avg7.first > 0) "${avg7.first}" else "--",
@@ -84,6 +108,8 @@ fun HomeScreen(
 
             item { ReferenceGuideCard(modifier = Modifier.padding(horizontal = 16.dp)) }
 
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
             item {
                 RecentMeasurementsCard(
                     measurements = measurements.take(5),
@@ -100,8 +126,8 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 24.dp, end = 16.dp),
-            containerColor = AppBlue,
-            contentColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             shape = RoundedCornerShape(16.dp)
         ) {
             Icon(Icons.Default.Add, contentDescription = "Saisir une mesure", modifier = Modifier.size(32.dp))
@@ -114,7 +140,7 @@ fun HeaderSection(profileName: String, onNotificationsClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(AppBlue)
+            .background(MaterialTheme.colorScheme.primary)
             .padding(top = 40.dp, start = 16.dp, end = 16.dp, bottom = 60.dp)
     ) {
         Row(
@@ -122,14 +148,14 @@ fun HeaderSection(profileName: String, onNotificationsClick: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
             Column {
-                Text(text = "Bonjour, $profileName 👋", color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
-                Text(text = "Tableau de Bord", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Bonjour, $profileName 👋", color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f), fontSize = 16.sp)
+                Text(text = "Tableau de Bord", color = MaterialTheme.colorScheme.onPrimary, fontSize = 28.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(
                 onClick = onNotificationsClick,
-                modifier = Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.2f))
+                modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
             ) {
-                Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White)
+                Icon(Icons.Default.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
@@ -142,7 +168,7 @@ fun LastMeasurementCard(current: Measurement?, previous: Measurement?) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .offset(y = (-40).dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(24.dp)
     ) {
@@ -164,15 +190,15 @@ fun LastMeasurementCard(current: Measurement?, previous: Measurement?) {
 
                 Spacer(modifier = Modifier.height(16.dp))
                 val sdf = SimpleDateFormat("d MMMM yyyy à HH:mm", Locale.FRENCH)
-                Text(text = "Dernière mesure • ${sdf.format(Date(current.date))}", color = Color.Gray, fontSize = 13.sp)
-                Text(text = "SYSTOLIQUE / DIASTOLIQUE", color = Color.LightGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Dernière mesure • ${sdf.format(Date(current.date))}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                Text(text = "SYSTOLIQUE / DIASTOLIQUE", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "${current.systolic}", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = AppBlue)
-                    Text(text = " / ", fontSize = 40.sp, color = Color.LightGray)
-                    Text(text = "${current.diastolic}", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = AppBlue)
+                    Text(text = "${current.systolic}", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(text = " / ", fontSize = 40.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                    Text(text = "${current.diastolic}", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "mmHg", color = Color.Gray, fontSize = 18.sp)
+                    Text(text = "mmHg", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 18.sp)
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -183,28 +209,28 @@ fun LastMeasurementCard(current: Measurement?, previous: Measurement?) {
                         Spacer(modifier = Modifier.width(16.dp))
                         TrendItem("Dia ${if (diaDiff >= 0) "+" else ""}$diaDiff", if (diaDiff > 0) StatusStage2 else StatusNormal, diaDiff > 0)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "vs précédente", color = Color.LightGray, fontSize = 12.sp)
+                        Text(text = "vs précédente", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), fontSize = 12.sp)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Box(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFFF8F9FB)).padding(12.dp)
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)).padding(12.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White).padding(8.dp), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surface).padding(8.dp), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Favorite, contentDescription = null, tint = Color.Red)
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(text = "Fréquence cardiaque", color = Color.Gray, fontSize = 12.sp)
+                            Text(text = "Fréquence cardiaque", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                             Text(text = "${current.pulse} bpm", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         }
                     }
                 }
             } else {
-                Text("Aucune mesure enregistrée", modifier = Modifier.padding(20.dp), color = Color.Gray)
+                Text("Aucune mesure enregistrée", modifier = Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -228,15 +254,15 @@ fun TrendItem(text: String, color: Color, isUp: Boolean) {
 fun SummaryCard(label: String, value: String, subtitle: String, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.offset(y = (-30).dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = label, fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+            Text(text = label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = AppBlue)
-                Text(text = subtitle, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 3.dp))
+                Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(text = subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 3.dp))
             }
         }
     }
@@ -246,12 +272,12 @@ fun SummaryCard(label: String, value: String, subtitle: String, modifier: Modifi
 fun ReferenceGuideCard(modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "GUIDE DE RÉFÉRENCE", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+            Text(text = "GUIDE DE RÉFÉRENCE", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(16.dp))
             ReferenceRow("Normale", "< 120 / 80", StatusNormal, StatusNormalBg)
             ReferenceRow("Élevée", "120–129 / < 80", StatusElevated, StatusElevatedBg)
@@ -267,14 +293,13 @@ fun ReferenceRow(label: String, value: String, color: Color, bgColor: Color) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+        verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(bgColor).padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(text = label, color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
-        Text(text = value, fontSize = 12.sp, color = Color.DarkGray, fontWeight = FontWeight.Medium)
+        Text(text = value, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -286,7 +311,7 @@ fun RecentMeasurementsCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -294,12 +319,11 @@ fun RecentMeasurementsCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "Mesures récentes", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Mesures récentes", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
                 TextButton(onClick = onSeeAllClick, contentPadding = PaddingValues(0.dp)) {
-                    Text(text = "Voir tout", color = AppBlue)
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = AppBlue, modifier = Modifier.size(20.dp))
+                    Text(text = "Voir tout", color = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 }
             }
             
@@ -312,7 +336,7 @@ fun RecentMeasurementsCard(
                     statusColor = status.color
                 )
                 if (index < measurements.size - 1) {
-                    HorizontalDivider(color = Color(0xFFF0F0F0))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }
@@ -329,12 +353,12 @@ fun MeasurementRow(pressure: String, date: String, pulse: String, statusColor: C
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(text = pressure, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                Text(text = " mmHg", color = Color.LightGray, fontSize = 14.sp)
+                Text(text = pressure, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(text = " mmHg", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
             }
-            Text(text = date, color = Color.Gray, fontSize = 12.sp)
+            Text(text = date, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         }
-        Text(text = pulse, color = Color.Gray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(text = pulse, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
 
