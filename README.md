@@ -5,7 +5,7 @@ Une application Android intuitive et accessible conçue pour aider les patients 
 ## Objectifs du Projet
 L'objectif principal est de simplifier la saisie et le suivi de la tension artérielle pour un public senior ou non technophile. L'interface privilégie la lisibilité avec de grands boutons, des contrastes clairs et une navigation simplifiée.
 
-## Aperçu de l'interface
+## Aperçu de l'interface (Maquettes)
 
 | Accueil & Saisie | Tendances & Graphiques | Historique des mesures | Paramètres |
 |:---:|:---:|:---:|:---:|
