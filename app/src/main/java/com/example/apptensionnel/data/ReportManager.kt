@@ -173,7 +173,7 @@ class ReportManager(private val context: Context) {
     }
 
     private fun getReportsDir(): File {
-        val dir = File(context.externalCacheDir, "reports")
+        val dir = File(context.cacheDir, "reports")
         if (!dir.exists()) dir.mkdirs()
         return dir
     }
